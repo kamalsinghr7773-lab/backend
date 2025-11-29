@@ -1,39 +1,40 @@
 import express from "express";
+import axios from "axios";
 import cors from "cors";
-import fetch from "node-fetch";
+import dotenv from "dotenv";
 
+dotenv.config();
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-const HF_API_KEY = process.env.HF_API_KEY;
-const MODEL_URL = "https://api-inference.huggingface.co/models/facebook/musicgen-small";
-
+// Test route
 app.get("/", (req, res) => {
   res.send("Backend Running Successfully!");
 });
 
-app.post("/generate-video", async (req, res) => {
+// Rhyme generator API
+app.post("/generate", async (req, res) => {
+  const { prompt } = req.body;
+
   try {
-    const { prompt } = req.body;
+    const response = await axios.post(
+      "https://api-inference.huggingface.co/models/gpt2",
+      { inputs: prompt },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HF_API_KEY}`,
+        },
+      }
+    );
 
-    const response = await fetch(MODEL_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${HF_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ inputs: prompt })
-    });
-
-    const result = await response.json();
-    return res.json(result);
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Generation failed" });
+    res.json({ output: response.data });
+  } catch (err) {
+    res.status(500).json({ error: "Generation failed", details: err.message });
   }
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(3000, () => {
+  console.log("Server running on port 3000");
+});
