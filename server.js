@@ -6,42 +6,34 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ----------------------
-// TEST ROUTE
-// ----------------------
+const HF_API_KEY = process.env.HF_API_KEY;
+const MODEL_URL = "https://api-inference.huggingface.co/models/facebook/musicgen-small";
+
 app.get("/", (req, res) => {
   res.send("Backend Running Successfully!");
 });
 
-// ----------------------
-// TEXT → VIDEO ROUTE
-// ----------------------
 app.post("/generate-video", async (req, res) => {
   try {
     const { prompt } = req.body;
 
-    if (!prompt) {
-      return res.status(400).json({ error: "Prompt is required" });
-    }
+    const response = await fetch(MODEL_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${HF_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ inputs: prompt })
+    });
 
-    const response = await fetch(
-      "https://api-inference.huggingface.co/models/your-model-name",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.HF_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ inputs: prompt }),
-      }
-    );
+    const result = await response.json();
+    return res.json(result);
 
-    const data = await response.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: "Server error", details: err.message });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Generation failed" });
   }
 });
 
-// LISTEN
-app.listen(3000, () => console.log("Server running on port 3000"));
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
